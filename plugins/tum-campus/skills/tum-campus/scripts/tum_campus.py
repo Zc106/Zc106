@@ -335,6 +335,28 @@ def safe_campus_url(raw: str) -> str:
     return ""
 
 
+def split_description(description: str) -> tuple[str, str]:
+    """Split 'fix; Abhaltung; Start um 08:00' into (state, note).
+
+    TUMonline writes '<state>; <kind of date>; <free remark>'. The state is
+    'fix' for a session that takes place and e.g. 'verschoben' (moved) or
+    'abgelehnt' (declined) on entries it has replaced or dropped.
+    """
+    parts = [part.strip() for part in description.split(";") if part.strip()]
+    if len(parts) >= 2 and re.fullmatch(r"[a-zäöüß]+", parts[0]):
+        return parts[0], "; ".join(parts[2:])
+    return "", description
+
+
+def room_of(location: str) -> dict:
+    room = {"location": location}
+    match = _ROOM_ID.search(location)
+    if match:
+        room["room_id"] = match.group("id")
+        room["room_map_url"] = "https://nav.tum.de/room/" + match.group("id")
+    return room
+
+
 def parse_event(element: ET.Element) -> dict | None:
     start = parse_datetime(element.findtext("dtstart") or "")
     end = parse_datetime(element.findtext("dtend") or "")
@@ -345,6 +367,7 @@ def parse_event(element: ET.Element) -> dict | None:
     title = text_of(element, "title")
     description = text_of(element, "description")
     status = text_of(element, "status")
+    state, note = split_description(description)
     locations = [
         " ".join((loc.text or "").split())
         for loc in element.findall("location")
@@ -364,13 +387,15 @@ def parse_event(element: ET.Element) -> dict | None:
         "status": status,
         "cancelled": status.upper() == "CANCEL",
         "is_exam": "prüfungstermin" in description.lower(),
+        "state": state,
+        "note": note,
         "description": description,
         "url": safe_campus_url(element.findtext("url") or ""),
     }
-    room = _ROOM_ID.search(locations[0]) if locations else None
-    if room:
-        event["room_id"] = room.group("id")
-        event["room_map_url"] = "https://nav.tum.de/room/" + room.group("id")
+    if locations:
+        room = room_of(locations[0])
+        room.pop("location")
+        event.update(room)
     event["_start"] = start
     event["_end"] = end
     return event
@@ -473,14 +498,100 @@ def merged_minutes(events: list[dict], day: date) -> int:
     return int(total.total_seconds() // 60)
 
 
+def merge_parallel(events: list[dict]) -> list[dict]:
+    """Fold entries for one session held in several rooms into one event.
+
+    TUMonline lists a lecture once per room, e.g. the lecture hall plus a
+    second hall with a video feed. The extra rooms end up in `also_in`.
+    """
+    groups: dict[tuple, list[dict]] = {}
+    for event in events:
+        groups.setdefault((event["title"], event["_start"], event["_end"]), []).append(event)
+    merged = []
+    for group in groups.values():
+        # The room people are actually taught in comes first.
+        group.sort(key=lambda e: "übertragung" in e["note"].lower())
+        main = dict(group[0])
+        extras = []
+        for other in group[1:]:
+            for location in other["locations"]:
+                if location in main["locations"]:
+                    continue
+                extra = room_of(location)
+                if other["note"]:
+                    extra["note"] = other["note"]
+                extras.append(extra)
+        if extras:
+            main["also_in"] = extras
+        merged.append(main)
+    merged.sort(key=lambda e: (e["_start"], e["_end"], e["title"]))
+    return attach_overflow_rooms(merged)
+
+
+def attach_overflow_rooms(events: list[dict]) -> list[dict]:
+    """A video-feed room booked across several sessions joins the first of them."""
+    kept = []
+    for event in events:
+        if "übertragung" in event["note"].lower():
+            hosts = [
+                other for other in events
+                if other is not event
+                and other["title"] == event["title"]
+                and "übertragung" not in other["note"].lower()
+                and other["_start"] < event["_end"] and event["_start"] < other["_end"]
+            ]
+            if hosts:
+                host = hosts[0]
+                known = set(host["locations"]) | {r["location"] for r in host.get("also_in", [])}
+                for location in event["locations"]:
+                    if location not in known:
+                        host.setdefault("also_in", []).append({**room_of(location), "note": event["note"]})
+                continue
+        kept.append(event)
+    return kept
+
+
+def apply_replacements(active: list[dict], replaced: list[dict]) -> list[dict]:
+    """Work out what each CANCEL entry means; return the ones truly called off.
+
+    TUMonline keeps the old entry with status CANCEL when a session moves to
+    another room or time, next to the new entry. Only a CANCEL entry with no
+    replacement on the same day is a session that does not take place.
+    """
+    called_off = []
+    for old in replaced:
+        same_day = [e for e in active if e["title"] == old["title"]]
+        same_slot = [e for e in same_day if e["_start"] == old["_start"]]
+        if same_slot:
+            new = same_slot[0]
+            known = set(new["locations"]) | {r["location"] for r in new.get("also_in", [])}
+            previous = [loc for loc in old["locations"] if loc not in known]
+            if previous and "change" not in new:
+                new["change"] = {"type": "room_changed", "previous_locations": previous}
+        elif same_day:
+            new = min(same_day, key=lambda e: abs((e["_start"] - old["_start"]).total_seconds()))
+            if "change" not in new:
+                new["change"] = {
+                    "type": "time_changed",
+                    "previous_start_time": old["start_time"],
+                    "previous_end_time": old["end_time"],
+                }
+        else:
+            gone = dict(old)
+            gone["reason"] = "moved_to_another_day" if old["state"] == "verschoben" else "cancelled"
+            called_off.append(gone)
+    return called_off
+
+
 def day_summary(events: list[dict], day: date) -> dict:
     on_day = events_on(events, day)
-    active = [e for e in on_day if not e["cancelled"]]
+    active = merge_parallel([e for e in on_day if not e["cancelled"]])
+    called_off = apply_replacements(active, merge_parallel([e for e in on_day if e["cancelled"]]))
     summary = {
         "date": day.isoformat(),
         "weekday": day.strftime("%A"),
         "events": [public(e) for e in active],
-        "cancelled": [public(e) for e in on_day if e["cancelled"]],
+        "cancelled": [public(e) for e in called_off],
         "scheduled_minutes": merged_minutes(active, day),
     }
     if active:
@@ -529,11 +640,25 @@ def parse_day(raw: str | None) -> date:
 
 
 def format_event_line(event: dict) -> str:
-    where = f" @ {event['locations'][0]}" if event["locations"] else ""
-    flags = "".join(
-        [" [CANCELLED]" if event["cancelled"] else "", " [EXAM]" if event["is_exam"] else ""]
-    )
-    return f"{event['start_time']}-{event['end_time']}  {event['title']}{where}{flags}"
+    line = f"{event['start_time']}-{event['end_time']}  {event['title']}"
+    if event["locations"]:
+        line += f" @ {event['locations'][0]}"
+    for extra in event.get("also_in", []):
+        line += f" + {extra['location']}"
+    if event["is_exam"]:
+        line += " [EXAM]"
+    change = event.get("change", {})
+    if change.get("type") == "room_changed":
+        line += f" [ROOM CHANGED, was {'; '.join(change['previous_locations'])}]"
+    elif change.get("type") == "time_changed":
+        line += f" [TIME CHANGED, was {change['previous_start_time']}-{change['previous_end_time']}]"
+    if event.get("reason") == "moved_to_another_day":
+        line += " [NOT TODAY: MOVED]"
+    elif event.get("reason"):
+        line += " [CANCELLED]"
+    if event["note"]:
+        line += f"  ({event['note']})"
+    return line
 
 
 def cmd_login(args) -> int:
@@ -604,10 +729,16 @@ def cmd_calendar(args) -> int:
     end = parse_day(args.end) if args.end else start + timedelta(days=max(args.days, 1) - 1)
     if end < start:
         raise TumOnlineError("bad_argument", "--to is before --from.")
-    events = [
-        e for e in fetch_events(token)
-        if e["_start"].date() <= end and e["_end"].date() >= start
-    ]
+    if (end - start).days > 400:
+        raise TumOnlineError("bad_argument", "The range is longer than 400 days.")
+    events = fetch_events(token)
+    days = []
+    day = start
+    while day <= end:
+        summary = day_summary(events, day)
+        if summary["events"] or summary["cancelled"]:
+            days.append(summary)
+        day += timedelta(days=1)
     if args.json:
         emit(
             {
@@ -615,19 +746,18 @@ def cmd_calendar(args) -> int:
                 "from": start.isoformat(),
                 "to": end.isoformat(),
                 "timezone": "Europe/Berlin",
-                "events": [public(e) for e in events],
+                "days": days,
             }
         )
         return EXIT_OK
-    if not events:
+    if not days:
         print(f"No TUMonline events between {start} and {end}.")
         return EXIT_OK
-    current = None
-    for event in events:
-        if event["date"] != current:
-            current = event["date"]
-            print(f"\n{event['_start'].strftime('%A %Y-%m-%d')}")
-        print("  " + format_event_line(event))
+    for summary in days:
+        print(f"\n{summary['weekday']} {summary['date']}")
+        entries = summary["events"] + summary["cancelled"]
+        for event in sorted(entries, key=lambda e: (e["start"], e["end"])):
+            print("  " + format_event_line(event))
     return EXIT_OK
 
 

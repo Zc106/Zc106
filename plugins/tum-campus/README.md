@@ -50,7 +50,7 @@ token 是凭证：不要贴进聊天、不要提交进仓库。脚本自己不�
 | 命令 | 作用 |
 | --- | --- |
 | `brief [--date 日期] [--exam-days 21]` | 给晨间简报用的 JSON：今天、明天、近期考试（只发一次请求） |
-| `calendar [--from 日期] [--to 日期 \| --days N] [--json]` | 某段时间的日历 |
+| `calendar [--from 日期] [--to 日期 \| --days N] [--json]` | 某段时间的日历，按天整理 |
 | `lectures [--all] [--json]` | 已选课程（默认只看当前学期） |
 | `grades [--limit N] [--json]` | 成绩，最新的在前 |
 | `status` | token 是否已确认 |
@@ -59,12 +59,22 @@ token 是凭证：不要贴进聊天、不要提交进仓库。脚本自己不�
 
 日期写 `YYYY-MM-DD`、`today` 或 `tomorrow`。所有时间都是慕尼黑当地时间。
 
+### 关于“取消”的课
+
+TUMonline 在一节课换教室或改时间时，会把旧记录标成 `CANCEL` 并保留在日历里，旁边再放一条新记录。所以原始数据里的 `CANCEL` 绝大多数不是停课。脚本会把它们对上号：
+
+- 换教室、改时间的课只出现一次，带一个 `change` 字段说明原来的教室或时间；
+- 同一节课占了多个教室（比如另开一间视频转播教室）会合并成一条，其余教室放在 `also_in`；
+- 只有当天找不到替代记录的，才算作当天不上的课，放进 `cancelled`。
+
+`lectures` 依赖的 TUMonline 接口有时会被校方临时关闭，此时命令会返回 `service_unavailable`；`brief` 和 `calendar` 不受影响。
+
 ## 接入晨间简报
 
 skill 里的 “Morning brief” 一节告诉 Claude 怎么用 `brief` 的结果：
 
 - 今天的课算作日历事件，参与当天“地形图”和三段时间的绘制；和 Google Calendar 里重复的同一节课只算一次。
-- 被取消的课归入 Resolved。
+- 当天不上的课归入 Resolved；改了时间的课、老师写的备注（比如“改为线上”）写在课程板块对应的那一行。
 - 明天的考试归入 Needs attention；更远的考试在课程板块里提一句还剩几天。
 - `Sections:` 里有课程相关条目时，按时间列出今天的课、类型和教室（教室链接到 NavigaTUM）。
 
@@ -76,4 +86,4 @@ skill 里的 “Morning brief” 一节告诉 Claude 怎么用 `brief` 的结果
 python3 -m unittest discover -s tests -v
 ```
 
-测试不联网，用的是按 TUM Campus App 数据模型字段编写的 XML 样例。
+测试不联网，用的是按 TUMonline 实际返回结构编写的 XML 样例（内容是虚构的）。

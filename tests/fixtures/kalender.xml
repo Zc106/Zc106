@@ -71,4 +71,63 @@
     <dtstart>2026-11-18 08:00:00</dtstart>
     <dtend>2026-11-18 10:00:00</dtend>
   </event>
+  <!-- Thursday 2026-11-19: how TUMonline records moved sessions -->
+  <event>
+    <nr>900000101</nr><status>CANCEL</status>
+    <url>https://campus.tum.de/tumonline/lv.detail?cLvNr=950000101</url>
+    <title>Schaltungstheorie VI</title>
+    <description>verschoben; Abhaltung; </description>
+    <dtstart>2026-11-19 10:00:00</dtstart><dtend>2026-11-19 11:30:00</dtend>
+    <location>1200, Carl-von-Linde-Hörsaal (0502.01.200)</location>
+  </event>
+  <event>
+    <nr>900000102</nr><status>FT</status>
+    <url>https://campus.tum.de/tumonline/lv.detail?cLvNr=950000101</url>
+    <title>Schaltungstheorie VI</title>
+    <description>fix; Abhaltung; </description>
+    <dtstart>2026-11-19 10:00:00</dtstart><dtend>2026-11-19 11:30:00</dtend>
+    <location>0980, Audimax (0509.EG.980)</location>
+  </event>
+  <event>
+    <nr>900000103</nr><status>CANCEL</status>
+    <title>Lineare Algebra (EI) [MA9409] VO</title>
+    <description>verschoben; Abhaltung; </description>
+    <dtstart>2026-11-19 08:45:00</dtstart><dtend>2026-11-19 10:15:00</dtend>
+    <location>1200, Carl-von-Linde-Hörsaal (0502.01.200)</location>
+  </event>
+  <event>
+    <nr>900000104</nr><status>FT</status>
+    <title>Lineare Algebra (EI) [MA9409] VO</title>
+    <description>fix; Abhaltung; Raum für Videoübertragung</description>
+    <dtstart>2026-11-19 08:00:00</dtstart><dtend>2026-11-19 11:15:00</dtend>
+    <location>2760, Hörsaal (0507.02.760)</location>
+  </event>
+  <event>
+    <nr>900000105</nr><status>FT</status>
+    <title>Lineare Algebra (EI) [MA9409] VO</title>
+    <description>fix; Abhaltung; !Achtung: Start um 08:00</description>
+    <dtstart>2026-11-19 08:00:00</dtstart><dtend>2026-11-19 09:30:00</dtend>
+    <location>1200, Carl-von-Linde-Hörsaal (0502.01.200)</location>
+  </event>
+  <event>
+    <nr>900000106</nr><status>CANCEL</status>
+    <title>Computertechnik Tutorium TT</title>
+    <description>verschoben; Abhaltung; </description>
+    <dtstart>2026-11-19 14:00:00</dtstart><dtend>2026-11-19 15:30:00</dtend>
+    <location>0670ZG, Hör-/Lehrsaal eben o.Exp.Bühne (0506.Z1.670)</location>
+  </event>
+  <event>
+    <nr>900000107</nr><status>FT</status>
+    <title>Analysis 1 (EI) [MA9411] VO</title>
+    <description>fix; Abhaltung; Raum für Videoübertragung</description>
+    <dtstart>2026-11-19 16:00:00</dtstart><dtend>2026-11-19 17:30:00</dtend>
+    <location>2770, Hörsaal (0507.02.770)</location>
+  </event>
+  <event>
+    <nr>900000108</nr><status>FT</status>
+    <title>Analysis 1 (EI) [MA9411] VO</title>
+    <description>fix; Abhaltung; </description>
+    <dtstart>2026-11-19 16:00:00</dtstart><dtend>2026-11-19 17:30:00</dtend>
+    <location>1200, Carl-von-Linde-Hörsaal (0502.01.200)</location>
+  </event>
 </events>

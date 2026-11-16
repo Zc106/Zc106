@@ -161,6 +161,55 @@ class BriefTests(CliTestCase):
         self.assertIn("<script>", title)  # passed through as data, never interpreted
 
 
+class MovedSessionTests(CliTestCase):
+    """TUMonline keeps a CANCEL entry next to the new one when a session moves."""
+
+    def setUp(self):
+        super().setUp()
+        code, out, _ = self.run_cli("brief", "--date", "2026-11-19")
+        self.day = json.loads(out)["today"]
+        self.by_title = {e["title"]: e for e in self.day["events"]}
+
+    def test_room_change_is_one_session_not_a_cancellation(self):
+        event = self.by_title["Schaltungstheorie VI"]
+        self.assertEqual(event["locations"], ["0980, Audimax (0509.EG.980)"])
+        self.assertEqual(event["change"], {
+            "type": "room_changed",
+            "previous_locations": ["1200, Carl-von-Linde-Hörsaal (0502.01.200)"],
+        })
+
+    def test_time_change_points_at_the_old_slot(self):
+        event = self.by_title["Lineare Algebra (EI) [MA9409] VO"]
+        self.assertEqual((event["start_time"], event["end_time"]), ("08:00", "09:30"))
+        self.assertEqual(event["change"]["type"], "time_changed")
+        self.assertEqual(event["change"]["previous_start_time"], "08:45")
+        self.assertEqual(event["note"], "!Achtung: Start um 08:00")
+
+    def test_video_feed_room_joins_its_lecture(self):
+        linalg = self.by_title["Lineare Algebra (EI) [MA9409] VO"]
+        self.assertEqual([r["location"] for r in linalg["also_in"]], ["2760, Hörsaal (0507.02.760)"])
+        analysis = self.by_title["Analysis 1 (EI) [MA9411] VO"]
+        self.assertEqual(analysis["locations"], ["1200, Carl-von-Linde-Hörsaal (0502.01.200)"])
+        self.assertEqual(analysis["room_id"], "0502.01.200")
+        self.assertEqual(analysis["also_in"][0]["room_map_url"], "https://nav.tum.de/room/0507.02.770")
+        self.assertEqual(analysis["also_in"][0]["note"], "Raum für Videoübertragung")
+        self.assertEqual(len(self.day["events"]), 3)
+
+    def test_only_a_session_without_replacement_is_called_off(self):
+        self.assertEqual([e["title"] for e in self.day["cancelled"]], ["Computertechnik Tutorium TT"])
+        self.assertEqual(self.day["cancelled"][0]["reason"], "moved_to_another_day")
+
+    def test_scheduled_time_ignores_replaced_entries(self):
+        # 08:00-09:30, 10:00-11:30, 16:00-17:30
+        self.assertEqual(self.day["scheduled_minutes"], 270)
+        self.assertEqual((self.day["first_start"], self.day["last_end"]), ("08:00", "17:30"))
+
+    def test_plain_cancellation_reason(self):
+        code, out, _ = self.run_cli("brief", "--date", "2026-11-16")
+        gone = json.loads(out)["today"]["cancelled"][0]
+        self.assertEqual(gone["reason"], "cancelled")
+
+
 class ErrorTests(CliTestCase):
     def check(self, message, kind, code):
         server = FakeTumOnline({"kalender": error_xml(message)})
@@ -280,14 +329,23 @@ class LoginTests(CliTestCase):
 class ListingTests(CliTestCase):
     def test_calendar_range_json(self):
         code, out, _ = self.run_cli("calendar", "--from", "2026-11-16", "--days", "2", "--json")
-        events = json.loads(out)["events"]
-        self.assertEqual(len(events), 4)  # three on the 16th (one cancelled), one on the 17th
+        days = json.loads(out)["days"]
+        self.assertEqual([d["date"] for d in days], ["2026-11-16", "2026-11-17"])
+        self.assertEqual([len(d["events"]) for d in days], [2, 1])
+        self.assertEqual(len(days[0]["cancelled"]), 1)
+
+    def test_calendar_skips_empty_days(self):
+        code, out, _ = self.run_cli("calendar", "--from", "2026-11-20", "--to", "2026-11-26", "--json")
+        self.assertEqual(json.loads(out)["days"], [])
 
     def test_calendar_text(self):
         code, out, _ = self.run_cli("calendar", "--from", "2026-11-16", "--to", "2026-11-27")
         self.assertIn("Monday 2026-11-16", out)
         self.assertIn("[CANCELLED]", out)
         self.assertIn("[EXAM]", out)
+        self.assertIn("[ROOM CHANGED, was 1200, Carl-von-Linde-Hörsaal (0502.01.200)]", out)
+        self.assertIn("[TIME CHANGED, was 08:45-10:15]", out)
+        self.assertIn("[NOT TODAY: MOVED]", out)
 
     def test_calendar_rejects_reversed_range(self):
         code, out, _ = self.run_cli("calendar", "--from", "2026-11-17", "--to", "2026-11-16")
