@@ -1,0 +1,7 @@
+# TUMonline token exports - never commit a token
+.tum-campus/
+token.json
+token.txt
+
+__pycache__/
+*.pyc

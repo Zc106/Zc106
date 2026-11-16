@@ -1,0 +1,10 @@
+{
+  "name": "tum-campus",
+  "version": "1.0.0",
+  "description": "Read your own TUMonline data (TU Munich) with a personal token: today's classes with rooms, cancelled sessions, exam dates, registered courses and grades - and fold them into your morning brief.",
+  "author": {
+    "name": "Zc106"
+  },
+  "repository": "https://github.com/Zc106/Zc106",
+  "keywords": ["tum", "tumonline", "campus", "calendar", "timetable", "morning-brief", "student"]
+}

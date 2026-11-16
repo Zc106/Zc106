@@ -1,0 +1,16 @@
+{
+  "name": "zc106",
+  "owner": {
+    "name": "Zc106"
+  },
+  "metadata": {
+    "description": "Personal Claude plugins: TUMonline data for the morning brief."
+  },
+  "plugins": [
+    {
+      "name": "tum-campus",
+      "source": "./plugins/tum-campus",
+      "description": "Read your own TUMonline data (TU Munich) with a personal token and fold your classes into your morning brief."
+    }
+  ]
+}

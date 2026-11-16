@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rowset>
+  <row>
+    <datum>2026-07-20</datum><lv_nummer>XX0001</lv_nummer><lv_semester>26S</lv_semester><lv_titel>Vorkurs Mathematik</lv_titel>
+    <pruefer_nachname>Muster</pruefer_nachname><uninotenamekurz>1,7</uninotenamekurz><exam_typ_name>Fachprüfung</exam_typ_name><modus>Schriftlich</modus>
+    <studienidentifikator>1630 17 048</studienidentifikator><studienbezeichnung>Elektrotechnik und Informationstechnik</studienbezeichnung><st_studium_nr>1</st_studium_nr>
+  </row>
+  <row>
+    <datum>2026-09-28</datum><lv_nummer>XX0002</lv_nummer><lv_semester>26S</lv_semester><lv_titel>Sprachkurs</lv_titel>
+    <pruefer_nachname>Beispiel</pruefer_nachname><uninotenamekurz>B</uninotenamekurz><exam_typ_name>Fachprüfung</exam_typ_name><modus>Schriftlich</modus>
+    <studienidentifikator>1630 17 048</studienidentifikator><studienbezeichnung>Elektrotechnik und Informationstechnik</studienbezeichnung><st_studium_nr>1</st_studium_nr>
+  </row>
+</rowset>
