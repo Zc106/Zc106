@@ -130,4 +130,47 @@
     <dtstart>2026-11-19 16:00:00</dtstart><dtend>2026-11-19 17:30:00</dtend>
     <location>1200, Carl-von-Linde-Hörsaal (0502.01.200)</location>
   </event>
+  <!-- Fridays in December: a move that holds all semester, then a real one -->
+  <event>
+    <nr>900000201</nr><status>CANCEL</status>
+    <title>Digitaltechnik VI</title>
+    <description>verschoben; Abhaltung; </description>
+    <dtstart>2026-12-04 10:00:00</dtstart><dtend>2026-12-04 11:30:00</dtend>
+    <location>1200, Carl-von-Linde-Hörsaal (0502.01.200)</location>
+  </event>
+  <event>
+    <nr>900000202</nr><status>FT</status>
+    <title>Digitaltechnik VI</title>
+    <description>fix; Abhaltung; </description>
+    <dtstart>2026-12-04 10:00:00</dtstart><dtend>2026-12-04 11:30:00</dtend>
+    <location>0980, Audimax (0509.EG.980)</location>
+  </event>
+  <event>
+    <nr>900000211</nr><status>CANCEL</status>
+    <title>Digitaltechnik VI</title>
+    <description>verschoben; Abhaltung; </description>
+    <dtstart>2026-12-11 10:00:00</dtstart><dtend>2026-12-11 11:30:00</dtend>
+    <location>1200, Carl-von-Linde-Hörsaal (0502.01.200)</location>
+  </event>
+  <event>
+    <nr>900000212</nr><status>FT</status>
+    <title>Digitaltechnik VI</title>
+    <description>fix; Abhaltung; </description>
+    <dtstart>2026-12-11 10:00:00</dtstart><dtend>2026-12-11 11:30:00</dtend>
+    <location>0980, Audimax (0509.EG.980)</location>
+  </event>
+  <event>
+    <nr>900000221</nr><status>CANCEL</status>
+    <title>Digitaltechnik VI</title>
+    <description>verschoben; Abhaltung; </description>
+    <dtstart>2026-12-18 10:00:00</dtstart><dtend>2026-12-18 11:30:00</dtend>
+    <location>1200, Carl-von-Linde-Hörsaal (0502.01.200)</location>
+  </event>
+  <event>
+    <nr>900000222</nr><status>FT</status>
+    <title>Digitaltechnik VI</title>
+    <description>fix; Abhaltung; </description>
+    <dtstart>2026-12-18 10:00:00</dtstart><dtend>2026-12-18 11:30:00</dtend>
+    <location>N 1080 ZG, August-Föppl-Hörsaal (0101.Z1.080)</location>
+  </event>
 </events>

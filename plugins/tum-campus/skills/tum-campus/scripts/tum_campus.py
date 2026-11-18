@@ -583,10 +583,57 @@ def apply_replacements(active: list[dict], replaced: list[dict]) -> list[dict]:
     return called_off
 
 
+def active_sessions(events: list[dict], day: date) -> list[dict]:
+    return merge_parallel([e for e in events_on(events, day) if not e["cancelled"]])
+
+
+def last_room(events: list[dict], event: dict, weeks: int = 4) -> str | None:
+    """Main room of the same weekly session the last time it took place.
+
+    Looks back up to `weeks` weeks so a holiday break does not lose the trail.
+    """
+    for back in range(1, weeks + 1):
+        day = event["_start"].date() - timedelta(weeks=back)
+        for other in active_sessions(events, day):
+            if (
+                other["title"] == event["title"]
+                and other["_start"].time() == event["_start"].time()
+                and other["locations"]
+            ):
+                return other["locations"][0]
+    return None
+
+
+def compare_with_last_time(events: list[dict], active: list[dict]) -> None:
+    """Report room changes against where the session was held last time.
+
+    TUMonline compares with the original booking, and a session can stay
+    moved away from it for a whole semester. What matters to a student is
+    whether the room differs from the last time this weekly session met.
+    """
+    for event in active:
+        change = event.get("change")
+        if (change and change.get("type") != "room_changed") or not event["locations"]:
+            continue
+        previous = last_room(events, event)
+        if previous is None:
+            if change:
+                change["compared_to"] = "original_booking"
+        elif previous == event["locations"][0]:
+            event.pop("change", None)
+        else:
+            event["change"] = {
+                "type": "room_changed",
+                "previous_locations": [previous],
+                "compared_to": "last_week",
+            }
+
+
 def day_summary(events: list[dict], day: date) -> dict:
     on_day = events_on(events, day)
     active = merge_parallel([e for e in on_day if not e["cancelled"]])
     called_off = apply_replacements(active, merge_parallel([e for e in on_day if e["cancelled"]]))
+    compare_with_last_time(events, active)
     summary = {
         "date": day.isoformat(),
         "weekday": day.strftime("%A"),
@@ -649,7 +696,8 @@ def format_event_line(event: dict) -> str:
         line += " [EXAM]"
     change = event.get("change", {})
     if change.get("type") == "room_changed":
-        line += f" [ROOM CHANGED, was {'; '.join(change['previous_locations'])}]"
+        label = "last time" if change.get("compared_to") == "last_week" else "was"
+        line += f" [ROOM CHANGED, {label} {'; '.join(change['previous_locations'])}]"
     elif change.get("type") == "time_changed":
         line += f" [TIME CHANGED, was {change['previous_start_time']}-{change['previous_end_time']}]"
     if event.get("reason") == "moved_to_another_day":

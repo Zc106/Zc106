@@ -176,6 +176,7 @@ class MovedSessionTests(CliTestCase):
         self.assertEqual(event["change"], {
             "type": "room_changed",
             "previous_locations": ["1200, Carl-von-Linde-Hörsaal (0502.01.200)"],
+            "compared_to": "original_booking",
         })
 
     def test_time_change_points_at_the_old_slot(self):
@@ -208,6 +209,37 @@ class MovedSessionTests(CliTestCase):
         code, out, _ = self.run_cli("brief", "--date", "2026-11-16")
         gone = json.loads(out)["today"]["cancelled"][0]
         self.assertEqual(gone["reason"], "cancelled")
+
+
+class WeeklyRoomTests(CliTestCase):
+    """A move away from the original booking that holds every week is not news."""
+
+    def digitaltechnik(self, day):
+        code, out, _ = self.run_cli("brief", "--date", day)
+        events = json.loads(out)["today"]["events"]
+        return next(e for e in events if e["title"] == "Digitaltechnik VI")
+
+    def test_first_week_is_compared_with_the_original_booking(self):
+        change = self.digitaltechnik("2026-12-04")["change"]
+        self.assertEqual(change["compared_to"], "original_booking")
+        self.assertEqual(change["previous_locations"], ["1200, Carl-von-Linde-Hörsaal (0502.01.200)"])
+
+    def test_same_room_as_last_week_is_not_a_change(self):
+        event = self.digitaltechnik("2026-12-11")
+        self.assertEqual(event["locations"], ["0980, Audimax (0509.EG.980)"])
+        self.assertNotIn("change", event)
+
+    def test_new_room_is_compared_with_last_week(self):
+        event = self.digitaltechnik("2026-12-18")
+        self.assertEqual(event["change"], {
+            "type": "room_changed",
+            "previous_locations": ["0980, Audimax (0509.EG.980)"],
+            "compared_to": "last_week",
+        })
+
+    def test_text_output_names_last_weeks_room(self):
+        code, out, _ = self.run_cli("calendar", "--from", "2026-12-18")
+        self.assertIn("[ROOM CHANGED, last time 0980, Audimax (0509.EG.980)]", out)
 
 
 class ErrorTests(CliTestCase):

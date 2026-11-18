@@ -40,7 +40,7 @@ Event fields:
 - `title` is TUMonline's own text and the one to trust. `course`, `kind` (`VO`, `VI`, `UE`, `TT`, ...), `kind_name` (`Vorlesung`, `Übung`, `Tutorium`, ...), `group` and `module` are a best-effort split of it and may be empty.
 - `start_time`, `end_time`, `minutes`; `start` and `end` carry the date and UTC offset.
 - `locations` holds the room as TUMonline writes it; `room_map_url` links it on NavigaTUM. `also_in` lists further rooms for the same session, typically a second hall with a video feed.
-- `change`, when present: `{"type": "room_changed", "previous_locations": [...]}` or `{"type": "time_changed", "previous_start_time": ..., "previous_end_time": ...}`. A room change often dates from the start of the semester and repeats every week, so it is not necessarily news.
+- `change`, when present: `{"type": "room_changed", "previous_locations": [...], "compared_to": ...}` or `{"type": "time_changed", "previous_start_time": ..., "previous_end_time": ...}`. The room is compared with where the same weekly session met the last time (`"compared_to": "last_week"`, looking back up to four weeks), so a move that has held every week is not reported again. Without an earlier session it is compared with the original booking (`"original_booking"`).
 - `note` is the lecturer's or TUMonline's remark on that session, such as a changed start time or that it is held online. Often empty or generic (`Vorlesung`, `Zentralübung`).
 - `is_exam` is true for exam dates. `url` is the course page in TUMonline, or empty.
 
